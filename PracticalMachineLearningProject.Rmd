@@ -1,0 +1,326 @@
+---
+title: "Practical Machine Learning Project"
+author: "brigasnuncamais Tuesday, May 19th, 2015"
+geometry: margin=2cm
+output:
+  html_document:
+    self_contained: no
+
+---
+### Executive summary
+We work on the [Qualitative Activity Recognition of Weight Lifting Exercises](http://groupware.les.inf.puc-rio.br/har) Dataset  
+from Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H.  
+This dataset is available under CC BY-SA licence.  
+
+We will use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways.  
+
+Let's follow the titles of 'Practical Machine Learning / What is Prediction?' (p4/13) lecture plan.
+
+### Question  
+Can we predict the manner of performing unilateral dumbbell biceps curls by the six volunteers?  
+i.e., predict the value of variable `classe` which has followin possible values:  
+- A: exactly according to the specification  
+- B: throwing the elbows to the front  
+- C: lifting the dumbbell only halfway  
+- D: lowering the dumbbell only halfway  
+- E: throwing the hips to the front  
+
+### Input data  
+Get the data from Internet, check that training and testing dataset structure are identical  
+```{r input, echo = FALSE,results='hide'}
+# cleaning environment
+rm(list = ls(all = TRUE))
+
+# necessary libraries
+library(caret)
+library(rpart)
+library(rattle)
+library(randomForest)
+
+fileURL <- 'https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv'
+DestTrainFile <- 'pml-training.csv'
+# download.file (fileURL, destfile = DestTrainFile, method = 'libcurl')
+fileURLtest <- 'https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv'
+DestTestFile <- 'pml-testing.csv'
+# download.file (fileURLtest, destfile = DestTestFile, method = 'libcurl')
+
+# Read csv training and testing files into memory
+SrcTraining <- read.csv(DestTrainFile, header=T, as.is = T, na.strings=c("","NA","#DIV/0!"), sep=",", stringsAsFactors=F)
+SrcTesting <- read.csv(DestTestFile, header=T, as.is = T, na.strings=c("","NA","#DIV/0!"), sep=",", stringsAsFactors=F)
+SrcTraining$classe <- as.factor(SrcTraining$classe)
+
+# check that column names are identical in test and train datasets (except for classe and problem_id)
+SrcTrainColnames <- colnames(SrcTraining)
+SrcTestColnames <- colnames(SrcTesting)
+
+all.equal(SrcTrainColnames[1:length(SrcTrainColnames)-1], SrcTestColnames[1:length(SrcTestColnames)-1])
+```
+
+### Features : subset and zero covariates  
+We choose to remove columns containing NAs and keep "belt|[^(fore)]arm|dumbbell|forearm"  
+```{r subset, echo=FALSE}
+isThereAnyNAinCols <- sapply(SrcTraining, function (x) any(is.na(x) | x == ""))
+PreFilterPreds <- !isThereAnyNAinCols & grepl("belt|[^(fore)]arm|dumbbell|forearm", names(isThereAnyNAinCols))
+FilteredCovariates <- c("classe", names(isThereAnyNAinCols)[PreFilterPreds])
+
+# subset the initial dataset on possible predictors and target outcome 
+Training <- SrcTraining[, FilteredCovariates]
+```
+
+Removing zero covariates: there is none, all covariates are significant  
+```{r nsv, echo=FALSE}
+nsv  <- nearZeroVar(Training,saveMetrics=TRUE)
+nsv[nsv$nzv==TRUE,]
+```
+
+### Algorithm  
+We got a big training set of 19,622 entries and a small testing one of 20 entries. We choose to subset the given training set into five almost equal sets. Then each of these five are split into a training set (60%) and a testing set (40%).  
+```{r subsampling, echo=FALSE}
+# Divide the given training set into 5 roughly equal sets.
+set.seed(5555)
+InTraining <- createDataPartition(y=Training$classe, p=0.2, list=FALSE)
+SmallTrain1 <- Training[InTraining,]
+Tremaining <- Training[-InTraining,]
+set.seed(5555)
+InTraining <- createDataPartition(y=Tremaining$classe, p=0.25, list=FALSE)
+SmallTrain2 <- Tremaining[InTraining,]
+Tremaining <- Tremaining[-InTraining,]
+set.seed(5555)
+InTraining <- createDataPartition(y=Tremaining$classe, p=0.33, list=FALSE)
+SmallTrain3 <- Tremaining[InTraining,]
+Tremaining <- Tremaining[-InTraining,]
+set.seed(5555)
+InTraining <- createDataPartition(y=Tremaining$classe, p=0.5, list=FALSE)
+SmallTrain4 <- Tremaining[InTraining,]
+SmallTrain5 <- Tremaining[-InTraining,]
+# Divide each of these 5 sets into training (60%) and test (40%) sets.
+set.seed(5555)
+inTraining <- createDataPartition(y=SmallTrain1$classe, p=0.6, list=FALSE)
+SmallTraining1 <- SmallTrain1[inTraining,]
+SmallTesting1 <- SmallTrain1[-inTraining,]
+set.seed(5555)
+inTraining <- createDataPartition(y=SmallTrain2$classe, p=0.6, list=FALSE)
+SmallTraining2 <- SmallTrain2[inTraining,]
+SmallTesting2 <- SmallTrain2[-inTraining,]
+set.seed(5555)
+inTraining <- createDataPartition(y=SmallTrain3$classe, p=0.6, list=FALSE)
+SmallTraining3 <- SmallTrain3[inTraining,]
+SmallTesting3 <- SmallTrain3[-inTraining,]
+set.seed(5555)
+inTraining <- createDataPartition(y=SmallTrain4$classe, p=0.6, list=FALSE)
+SmallTraining4 <- SmallTrain4[inTraining,]
+SmallTesting4 <- SmallTrain4[-inTraining,]
+set.seed(5555)
+inTraining <- createDataPartition(y=SmallTrain5$classe, p=0.6, list=FALSE)
+SmallTraining5 <- SmallTrain5[inTraining,]
+SmallTesting5 <- SmallTrain5[-inTraining,]
+```
+We chose two different algorithms in the caret package: classification trees (method = rpart) and random forests (method = rf).
+
+### Parameters  
+We decided to try raw classification trees and then introduce preprocessing and cross validation.  
+
+### Evaluation  
+
+- The raw classification tree:  
+rpart train on training set 1 of 5 with no extra features
+```{r rpart 1,echo=FALSE}
+set.seed(5555)
+modFit <- train(SmallTraining1$classe ~ ., data = SmallTraining1, method="rpart")
+print(modFit, digits=3)
+```
+
+```{r rpart 1 mod,echo=FALSE}
+print(modFit$finalModel, digits=3)
+```
+
+```{r rpart 1 plot,echo=FALSE,fig.width=10,fig.height=7}
+fancyRpartPlot(modFit$finalModel)
+```
+
+Predict on testing set 1 of 5 with no extra features  
+```{r rpart 1 pred,echo=FALSE}
+predictions <- predict(modFit, newdata=SmallTesting1)
+print(confusionMatrix(predictions, SmallTesting1$classe), digits=4)
+```
+We observe a low accuracy : 0.4576 that we will try to improve by adding preprocessing or cross validation.  
+
+Train on training set 1 of 5 with only preprocessing  
+```{r rpart 1 prep,echo=FALSE}
+set.seed(5555)
+modFit <- train(SmallTraining1$classe ~ .,  preProcess=c("center", "scale"), data = SmallTraining1, method="rpart")
+print(modFit, digits=3)
+```
+
+Train on training set 1 of 5 with only cross validation  
+```{r rpart 1 cv,echo=FALSE}
+set.seed(5555)
+modFit <- train(SmallTraining1$classe ~ .,  trControl=trainControl(method = "cv", number = 4), data = SmallTraining1, method="rpart")
+print(modFit, digits=3)
+```
+
+Train on training set 1 of 5 with both preprocessing and cross validation  
+```{r rpart 1 cv prep,echo=FALSE}
+set.seed(5555)
+modFit <- train(SmallTraining1$classe ~ .,  preProcess=c("center", "scale"), trControl=trainControl(method = "cv", number = 4), data = SmallTraining1, method="rpart")
+print(modFit, digits=3)
+```
+
+Predict on testing set 1 of 5 with both preprocessing and cross validation  
+```{r rpart 1 cv prep pred,echo=FALSE}
+predictions <- predict(modFit, newdata=SmallTesting1)
+print(confusionMatrix(predictions, SmallTesting1$classe), digits=4)
+```
+We see minimal improvement with preprocessing and cross validation. Accuracy rate rose from 0.449 to 0.459 against training sets. We found the same accuracy rate (0.4576) for raw classfication and cross validation/preprocessing methods.  
+
+- Random Forest  
+
+We will first apply cross validation and then include preprocessing.  
+Train on training set 1 of 5 only with cross validation  
+```{r rf 1 cv,echo=FALSE}
+set.seed(5555)
+modFit <- train(SmallTraining1$classe ~ .,  trControl=trainControl(method = "cv", number = 4), data = SmallTraining1, method="rf")
+print(modFit, digits=3)
+```
+
+Train on training set 1 of 5 only with cross validation  
+```{r rf 1 cv pred,echo=FALSE}
+predictions <- predict(modFit, newdata=SmallTesting1)
+print(confusionMatrix(predictions, SmallTesting1$classe), digits=4)
+```
+
+Predict on project testing set  
+```{r rf 1 cv out,echo=FALSE}
+print(predict(modFit, newdata=SrcTesting))
+```
+
+Train on training set 1 of 5 with both preprocessing and cross validation  
+```{r rf 1 cv prep,echo=FALSE}
+set.seed(5555)
+modFit <- train(SmallTraining1$classe ~ ., method="rf", preProcess=c("center", "scale"), trControl=trainControl(method = "cv", number = 4), data=SmallTraining1)
+print(modFit, digits=3)
+```
+
+Predict on testing set 1 of 5 with both preprocessing and cross validation  
+```{r rf 1 cv prep pred,echo=FALSE}
+predictions <- predict(modFit, newdata=SmallTesting1)
+print(confusionMatrix(predictions, SmallTesting1$classe), digits=4)
+```
+
+Predict on project testing set  
+```{r rf 1 cv prep out,echo=FALSE}
+print(predict(modFit, newdata=SrcTesting))
+```
+
+Adding preprocessing gave the same accuracy (0.944) on the first training set. But with the first test set, the accuracy rate rose from 0.9452 to 0.9465 adding the same enhancement. So we decided to apply both preprocessing and cross validation to the remaining 4 data sets.  
+
+Train on training set 2 of 5 with both preprocessing and cross validation  
+```{r rf 2 cv prep,echo=FALSE}
+set.seed(5555)
+modFit <- train(SmallTraining2$classe ~ ., method="rf", preProcess=c("center", "scale"), trControl=trainControl(method = "cv", number = 4), data=SmallTraining2)
+print(modFit, digits=3)
+```
+
+Predict on testing set 2 of 5 with both preprocessing and cross validation  
+```{r rf 2 cv prep pred,echo=FALSE}
+predictions <- predict(modFit, newdata=SmallTesting2)
+print(confusionMatrix(predictions, SmallTesting2$classe), digits=4)
+```
+
+Predict on project testing set  
+```{r rf 2 cv prep out,echo=FALSE}
+print(predict(modFit, newdata=SrcTesting))
+```
+
+Train on training set 3 of 5 with both preprocessing and cross validation  
+```{r rf 3 cv prep,echo=FALSE}
+set.seed(5555)
+modFit <- train(SmallTraining3$classe ~ ., method="rf", preProcess=c("center", "scale"), trControl=trainControl(method = "cv", number = 4), data=SmallTraining3)
+print(modFit, digits=3)
+```
+
+Predict on testing set 3 of 5 with both preprocessing and cross validation  
+```{r rf 3 cv prep pred,echo=FALSE}
+predictions <- predict(modFit, newdata=SmallTesting3)
+print(confusionMatrix(predictions, SmallTesting3$classe), digits=4)
+```
+  
+Predict on project testing set  
+```{r rf 3 cv prep out,echo=FALSE}
+pred3 <- predict(modFit, newdata=SrcTesting)
+pred3
+```
+ 
+Train on training set 4 of 5 with both preprocessing and cross validation  
+```{r rf 4 cv prep,echo=FALSE}
+set.seed(5555)
+modFit <- train(SmallTraining4$classe ~ ., method="rf", preProcess=c("center", "scale"), trControl=trainControl(method = "cv", number = 4), data=SmallTraining4)
+print(modFit, digits=3)
+```
+
+Predict on testing set 4 of 5 with both preprocessing and cross validation
+```{r rf 4 cv prep pred,echo=FALSE}
+predictions <- predict(modFit, newdata=SmallTesting4)
+print(confusionMatrix(predictions, SmallTesting4$classe), digits=4)
+```
+
+Predict on project testing set  
+```{r rf 4 cv prep out,echo=FALSE}
+pred4 <- predict(modFit, newdata=SrcTesting)
+pred4
+```
+  
+Train on training set 5 of 5 with both preprocessing and cross validation  
+```{r rf 5 cv prep,echo=FALSE}
+set.seed(5555)
+modFit <- train(SmallTraining5$classe ~ ., method="rf", preProcess=c("center", "scale"), trControl=trainControl(method = "cv", number = 4), data=SmallTraining5)
+print(modFit, digits=3)
+```
+  
+Predict on testing set 5 of 5 with both preprocessing and cross validation  
+```{r rf 5 cv prep pred,echo=FALSE}
+predictions <- predict(modFit, newdata=SmallTesting5)
+print(confusionMatrix(predictions, SmallTesting5$classe), digits=4)
+```
+  
+Predict on project testing set  
+```{r rf 5 cv prep out,echo=FALSE}
+print(predict(modFit, newdata=SrcTesting))
+```
+
+### Out of Sample Error  
+This error is (1- Accuracy) for each prediction  
+
+- Random Forest cross validation test set 1 :   
+[1] B A B A A E D B A A B C B A E E A B B B : 1 - 0.9452 = 0.0548  
+
+- Random Forest cross validation and preprocessing test set 1 :  
+[1] B A B A A E D B A A B C B A E E A B B B : 1 - 0.9465 = 0.0535  
+
+- Random Forest cross validation and preprocessing test set 2 :  
+[1] B A A A A E D D A A B C B A E E A B B B : 1 - 0.9541 = 0.0459  
+
+- Random Forest cross validation and preprocessing test set 3 :  
+[1] B A B A A E D D A A B C B A E E A B B B : 1 - 0.9626 = 0.0374  
+
+- Random Forest cross validation and preprocessing test set 4 :  
+[1] B A C A A E D B A A B C B A E E A B B B : 1 - 0.9588 = 0.0412  
+
+- Random Forest cross validation and preprocessing test set 5 :  
+[1] B A B A A E D B A A B C B A E E A B B B : 1 - 0.9536 = 0.0464  
+
+### Conclusions  
+As we can submit at most 2 solutions for each test, we will choose the 2 sets with lower error: set3 and 4. Item 3 and 8 differ between these 2 sets. We amended submission function to prepare both solution set with files named on pattern : `problem_id_iXpredj.txt`(i=submission id;X=prediction result;predj=prediction/model id). We got 100% of correct answers.  
+
+### Appendix :  Project Submission function###  
+```{r submit}
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,x[i],deparse(substitute(x)),".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+pml_write_files(pred3)
+pml_write_files(pred4)
+```

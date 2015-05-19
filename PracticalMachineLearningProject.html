@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+<meta name="author" content="brigasnuncamais Tuesday, May 19th, 2015" />
+
+
+<title>Practical Machine Learning Project</title>
+
+<script src="PracticalMachineLearningProject_files/jquery-1.11.0/jquery.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="PracticalMachineLearningProject_files/bootstrap-3.3.1/css/bootstrap.min.css" rel="stylesheet" />
+<script src="PracticalMachineLearningProject_files/bootstrap-3.3.1/js/bootstrap.min.js"></script>
+<script src="PracticalMachineLearningProject_files/bootstrap-3.3.1/shim/html5shiv.min.js"></script>
+<script src="PracticalMachineLearningProject_files/bootstrap-3.3.1/shim/respond.min.js"></script>
+
+<style type="text/css">code{white-space: pre;}</style>
+<link rel="stylesheet"
+      href="PracticalMachineLearningProject_files/highlight/default.css"
+      type="text/css" />
+<script src="PracticalMachineLearningProject_files/highlight/highlight.js"></script>
+<style type="text/css">
+  pre:not([class]) {
+    background-color: white;
+  }
+</style>
+<script type="text/javascript">
+if (window.hljs && document.readyState && document.readyState === "complete") {
+   window.setTimeout(function() {
+      hljs.initHighlighting();
+   }, 0);
+}
+</script>
+
+
+
+</head>
+
+<body>
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img { 
+  max-width:100%; 
+  height: auto; 
+}
+</style>
+<div class="container-fluid main-container">
+
+
+<div id="header">
+<h1 class="title">Practical Machine Learning Project</h1>
+<h4 class="author"><em>brigasnuncamais Tuesday, May 19th, 2015</em></h4>
+</div>
+
+
+<div id="executive-summary" class="section level3">
+<h3>Executive summary</h3>
+<p>We work on the <a href="http://groupware.les.inf.puc-rio.br/har">Qualitative Activity Recognition of Weight Lifting Exercises</a> Dataset<br />from Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H.<br />This dataset is available under CC BY-SA licence.</p>
+<p>We will use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways.</p>
+<p>Let’s follow the titles of ‘Practical Machine Learning / What is Prediction?’ (p4/13) lecture plan.</p>
+</div>
+<div id="question" class="section level3">
+<h3>Question</h3>
+<p>Can we predict the manner of performing unilateral dumbbell biceps curls by the six volunteers?<br />i.e., predict the value of variable <code>classe</code> which has followin possible values:<br />- A: exactly according to the specification<br />- B: throwing the elbows to the front<br />- C: lifting the dumbbell only halfway<br />- D: lowering the dumbbell only halfway<br />- E: throwing the hips to the front</p>
+</div>
+<div id="input-data" class="section level3">
+<h3>Input data</h3>
+<p>Get the data from Internet, check that training and testing dataset structure are identical</p>
+<pre><code>## Loading required package: lattice
+## Loading required package: ggplot2
+## Rattle : une interface graphique gratuite pour l&#39;exploration de données avec R.
+## Version 3.4.1 Copyright (c) 2006-2014 Togaware Pty Ltd.
+## Entrez &#39;rattle()&#39; pour secouer, faire vibrer, et faire défiler vos données.
+## randomForest 4.6-10
+## Type rfNews() to see new features/changes/bug fixes.</code></pre>
+</div>
+<div id="features-subset-and-zero-covariates" class="section level3">
+<h3>Features : subset and zero covariates</h3>
+<p>We choose to remove columns containing NAs and keep “belt|[^(fore)]arm|dumbbell|forearm”</p>
+<p>Removing zero covariates: there is none, all covariates are significant</p>
+<pre><code>## [1] freqRatio     percentUnique zeroVar       nzv          
+## &lt;0 rows&gt; (or 0-length row.names)</code></pre>
+</div>
+<div id="algorithm" class="section level3">
+<h3>Algorithm</h3>
+<p>We got a big training set of 19,622 entries and a small testing one of 20 entries. We choose to subset the given training set into five almost equal sets. Then each of these five are split into a training set (60%) and a testing set (40%).</p>
+<p>We chose two different algorithms in the caret package: classification trees (method = rpart) and random forests (method = rf).</p>
+</div>
+<div id="parameters" class="section level3">
+<h3>Parameters</h3>
+<p>We decided to try raw classification trees and then introduce preprocessing and cross validation.</p>
+</div>
+<div id="evaluation" class="section level3">
+<h3>Evaluation</h3>
+<ul>
+<li>The raw classification tree:<br />rpart train on training set 1 of 5 with no extra features</li>
+</ul>
+<pre><code>## CART 
+## 
+## 2358 samples
+##   52 predictor
+##    5 classes: &#39;A&#39;, &#39;B&#39;, &#39;C&#39;, &#39;D&#39;, &#39;E&#39; 
+## 
+## No pre-processing
+## Resampling: Bootstrapped (25 reps) 
+## 
+## Summary of sample sizes: 2358, 2358, 2358, 2358, 2358, 2358, ... 
+## 
+## Resampling results across tuning parameters:
+## 
+##   cp      Accuracy  Kappa   Accuracy SD  Kappa SD
+##   0.0468  0.449     0.2799  0.0483       0.0871  
+##   0.0489  0.438     0.2603  0.0516       0.0934  
+##   0.1161  0.334     0.0703  0.0432       0.0637  
+## 
+## Accuracy was used to select the optimal model using  the largest value.
+## The final value used for the model was cp = 0.0468.</code></pre>
+<pre><code>## n= 2358 
+## 
+## node), split, n, loss, yval, (yprob)
+##       * denotes terminal node
+## 
+##  1) root 2358 1690 A (0.28 0.19 0.17 0.16 0.18)  
+##    2) roll_belt&lt; 130 2162 1490 A (0.31 0.21 0.19 0.18 0.11)  
+##      4) pitch_forearm&lt; -34.1 183    0 A (1 0 0 0 0) *
+##      5) pitch_forearm&gt;=-34.1 1979 1490 A (0.25 0.23 0.21 0.2 0.12)  
+##       10) roll_forearm&lt; 126 1278  837 A (0.35 0.24 0.16 0.19 0.068)  
+##         20) roll_forearm&gt;=-48.1 874  477 A (0.45 0.23 0.18 0.13 0.011) *
+##         21) roll_forearm&lt; -48.1 404  272 D (0.11 0.27 0.1 0.33 0.19) *
+##       11) roll_forearm&gt;=126 701  490 C (0.066 0.21 0.3 0.21 0.22) *
+##    3) roll_belt&gt;=130 196    0 E (0 0 0 0 1) *</code></pre>
+<p><img src="PracticalMachineLearningProject_files/figure-html/rpart%201%20plot-1.png" title="" alt="" width="960" /></p>
+<p>Predict on testing set 1 of 5 with no extra features</p>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction   A   B   C   D   E
+##          A 384 151 103  70  11
+##          B   0   0   0   0   0
+##          C  29  97 140 103 109
+##          D  30  56  31  84  58
+##          E   3   0   0   0 110
+## 
+## Overall Statistics
+##                                           
+##                Accuracy : 0.4576          
+##                  95% CI : (0.4327, 0.4826)
+##     No Information Rate : 0.2843          
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
+##                                           
+##                   Kappa : 0.3013          
+##  Mcnemar&#39;s Test P-Value : NA              
+## 
+## Statistics by Class:
+## 
+##                      Class: A Class: B Class: C Class: D Class: E
+## Sensitivity            0.8610   0.0000  0.51095  0.32685  0.38194
+## Specificity            0.7017   1.0000  0.73900  0.86662  0.99766
+## Pos Pred Value         0.5341      NaN  0.29289  0.32432  0.97345
+## Neg Pred Value         0.9271   0.8062  0.87718  0.86794  0.87775
+## Prevalence             0.2843   0.1938  0.17463  0.16380  0.18356
+## Detection Rate         0.2447   0.0000  0.08923  0.05354  0.07011
+## Detection Prevalence   0.4583   0.0000  0.30465  0.16507  0.07202
+## Balanced Accuracy      0.7813   0.5000  0.62497  0.59673  0.68980</code></pre>
+<p>We observe a low accuracy : 0.4576 that we will try to improve by adding preprocessing or cross validation.</p>
+<p>Train on training set 1 of 5 with only preprocessing</p>
+<pre><code>## CART 
+## 
+## 2358 samples
+##   52 predictor
+##    5 classes: &#39;A&#39;, &#39;B&#39;, &#39;C&#39;, &#39;D&#39;, &#39;E&#39; 
+## 
+## Pre-processing: centered, scaled 
+## Resampling: Bootstrapped (25 reps) 
+## 
+## Summary of sample sizes: 2358, 2358, 2358, 2358, 2358, 2358, ... 
+## 
+## Resampling results across tuning parameters:
+## 
+##   cp      Accuracy  Kappa   Accuracy SD  Kappa SD
+##   0.0468  0.449     0.2799  0.0483       0.0871  
+##   0.0489  0.438     0.2603  0.0516       0.0934  
+##   0.1161  0.334     0.0703  0.0432       0.0637  
+## 
+## Accuracy was used to select the optimal model using  the largest value.
+## The final value used for the model was cp = 0.0468.</code></pre>
+<p>Train on training set 1 of 5 with only cross validation</p>
+<pre><code>## CART 
+## 
+## 2358 samples
+##   52 predictor
+##    5 classes: &#39;A&#39;, &#39;B&#39;, &#39;C&#39;, &#39;D&#39;, &#39;E&#39; 
+## 
+## No pre-processing
+## Resampling: Cross-Validated (4 fold) 
+## 
+## Summary of sample sizes: 1769, 1770, 1768, 1767 
+## 
+## Resampling results across tuning parameters:
+## 
+##   cp      Accuracy  Kappa   Accuracy SD  Kappa SD
+##   0.0468  0.459     0.3045  0.0263       0.0342  
+##   0.0489  0.427     0.2478  0.0482       0.0911  
+##   0.1161  0.341     0.0863  0.0375       0.0586  
+## 
+## Accuracy was used to select the optimal model using  the largest value.
+## The final value used for the model was cp = 0.0468.</code></pre>
+<p>Train on training set 1 of 5 with both preprocessing and cross validation</p>
+<pre><code>## CART 
+## 
+## 2358 samples
+##   52 predictor
+##    5 classes: &#39;A&#39;, &#39;B&#39;, &#39;C&#39;, &#39;D&#39;, &#39;E&#39; 
+## 
+## Pre-processing: centered, scaled 
+## Resampling: Cross-Validated (4 fold) 
+## 
+## Summary of sample sizes: 1769, 1770, 1768, 1767 
+## 
+## Resampling results across tuning parameters:
+## 
+##   cp      Accuracy  Kappa   Accuracy SD  Kappa SD
+##   0.0468  0.459     0.3045  0.0263       0.0342  
+##   0.0489  0.427     0.2478  0.0482       0.0911  
+##   0.1161  0.341     0.0863  0.0375       0.0586  
+## 
+## Accuracy was used to select the optimal model using  the largest value.
+## The final value used for the model was cp = 0.0468.</code></pre>
+<p>Predict on testing set 1 of 5 with both preprocessing and cross validation</p>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction   A   B   C   D   E
+##          A 384 151 103  70  11
+##          B   0   0   0   0   0
+##          C  29  97 140 103 109
+##          D  30  56  31  84  58
+##          E   3   0   0   0 110
+## 
+## Overall Statistics
+##                                           
+##                Accuracy : 0.4576          
+##                  95% CI : (0.4327, 0.4826)
+##     No Information Rate : 0.2843          
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
+##                                           
+##                   Kappa : 0.3013          
+##  Mcnemar&#39;s Test P-Value : NA              
+## 
+## Statistics by Class:
+## 
+##                      Class: A Class: B Class: C Class: D Class: E
+## Sensitivity            0.8610   0.0000  0.51095  0.32685  0.38194
+## Specificity            0.7017   1.0000  0.73900  0.86662  0.99766
+## Pos Pred Value         0.5341      NaN  0.29289  0.32432  0.97345
+## Neg Pred Value         0.9271   0.8062  0.87718  0.86794  0.87775
+## Prevalence             0.2843   0.1938  0.17463  0.16380  0.18356
+## Detection Rate         0.2447   0.0000  0.08923  0.05354  0.07011
+## Detection Prevalence   0.4583   0.0000  0.30465  0.16507  0.07202
+## Balanced Accuracy      0.7813   0.5000  0.62497  0.59673  0.68980</code></pre>
+<p>We see minimal improvement with preprocessing and cross validation. Accuracy rate rose from 0.449 to 0.459 against training sets. We found the same accuracy rate (0.4576) for raw classfication and cross validation/preprocessing methods.</p>
+<ul>
+<li>Random Forest</li>
+</ul>
+<p>We will first apply cross validation and then include preprocessing.<br />Train on training set 1 of 5 only with cross validation</p>
+<pre><code>## Random Forest 
+## 
+## 2358 samples
+##   52 predictor
+##    5 classes: &#39;A&#39;, &#39;B&#39;, &#39;C&#39;, &#39;D&#39;, &#39;E&#39; 
+## 
+## No pre-processing
+## Resampling: Cross-Validated (4 fold) 
+## 
+## Summary of sample sizes: 1769, 1770, 1768, 1767 
+## 
+## Resampling results across tuning parameters:
+## 
+##   mtry  Accuracy  Kappa  Accuracy SD  Kappa SD
+##    2    0.944     0.930  0.00504      0.00639 
+##   27    0.942     0.927  0.00682      0.00861 
+##   52    0.932     0.914  0.01228      0.01554 
+## 
+## Accuracy was used to select the optimal model using  the largest value.
+## The final value used for the model was mtry = 2.</code></pre>
+<p>Train on training set 1 of 5 only with cross validation</p>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction   A   B   C   D   E
+##          A 442  17   0   4   0
+##          B   2 275  11   1   2
+##          C   1  10 259  17  11
+##          D   0   0   4 234   2
+##          E   1   2   0   1 273
+## 
+## Overall Statistics
+##                                           
+##                Accuracy : 0.9452          
+##                  95% CI : (0.9327, 0.9559)
+##     No Information Rate : 0.2843          
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
+##                                           
+##                   Kappa : 0.9306          
+##  Mcnemar&#39;s Test P-Value : 3.405e-05       
+## 
+## Statistics by Class:
+## 
+##                      Class: A Class: B Class: C Class: D Class: E
+## Sensitivity            0.9910   0.9046   0.9453   0.9105   0.9479
+## Specificity            0.9813   0.9874   0.9699   0.9954   0.9969
+## Pos Pred Value         0.9546   0.9450   0.8691   0.9750   0.9856
+## Neg Pred Value         0.9964   0.9773   0.9882   0.9827   0.9884
+## Prevalence             0.2843   0.1938   0.1746   0.1638   0.1836
+## Detection Rate         0.2817   0.1753   0.1651   0.1491   0.1740
+## Detection Prevalence   0.2951   0.1855   0.1899   0.1530   0.1765
+## Balanced Accuracy      0.9862   0.9460   0.9576   0.9530   0.9724</code></pre>
+<p>Predict on project testing set</p>
+<pre><code>##  [1] B A B A A E D B A A B C B A E E A B B B
+## Levels: A B C D E</code></pre>
+<p>Train on training set 1 of 5 with both preprocessing and cross validation</p>
+<pre><code>## Random Forest 
+## 
+## 2358 samples
+##   52 predictor
+##    5 classes: &#39;A&#39;, &#39;B&#39;, &#39;C&#39;, &#39;D&#39;, &#39;E&#39; 
+## 
+## Pre-processing: centered, scaled 
+## Resampling: Cross-Validated (4 fold) 
+## 
+## Summary of sample sizes: 1769, 1770, 1768, 1767 
+## 
+## Resampling results across tuning parameters:
+## 
+##   mtry  Accuracy  Kappa  Accuracy SD  Kappa SD
+##    2    0.944     0.930  0.00752      0.00952 
+##   27    0.942     0.926  0.00785      0.00992 
+##   52    0.932     0.914  0.01171      0.01482 
+## 
+## Accuracy was used to select the optimal model using  the largest value.
+## The final value used for the model was mtry = 2.</code></pre>
+<p>Predict on testing set 1 of 5 with both preprocessing and cross validation</p>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction   A   B   C   D   E
+##          A 441  14   0   2   0
+##          B   2 277  12   0   1
+##          C   1  13 257  18  11
+##          D   1   0   4 236   2
+##          E   1   0   1   1 274
+## 
+## Overall Statistics
+##                                           
+##                Accuracy : 0.9465          
+##                  95% CI : (0.9341, 0.9571)
+##     No Information Rate : 0.2843          
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
+##                                           
+##                   Kappa : 0.9322          
+##  Mcnemar&#39;s Test P-Value : NA              
+## 
+## Statistics by Class:
+## 
+##                      Class: A Class: B Class: C Class: D Class: E
+## Sensitivity            0.9888   0.9112   0.9380   0.9183   0.9514
+## Specificity            0.9858   0.9881   0.9668   0.9947   0.9977
+## Pos Pred Value         0.9650   0.9486   0.8567   0.9712   0.9892
+## Neg Pred Value         0.9955   0.9789   0.9866   0.9842   0.9892
+## Prevalence             0.2843   0.1938   0.1746   0.1638   0.1836
+## Detection Rate         0.2811   0.1765   0.1638   0.1504   0.1746
+## Detection Prevalence   0.2913   0.1861   0.1912   0.1549   0.1765
+## Balanced Accuracy      0.9873   0.9497   0.9524   0.9565   0.9745</code></pre>
+<p>Predict on project testing set</p>
+<pre><code>##  [1] B A B A A E D B A A B C B A E E A B B B
+## Levels: A B C D E</code></pre>
+<p>Adding preprocessing gave the same accuracy (0.944) on the first training set. But with the first test set, the accuracy rate rose from 0.9452 to 0.9465 adding the same enhancement. So we decided to apply both preprocessing and cross validation to the remaining 4 data sets.</p>
+<p>Train on training set 2 of 5 with both preprocessing and cross validation</p>
+<pre><code>## Random Forest 
+## 
+## 2357 samples
+##   52 predictor
+##    5 classes: &#39;A&#39;, &#39;B&#39;, &#39;C&#39;, &#39;D&#39;, &#39;E&#39; 
+## 
+## Pre-processing: centered, scaled 
+## Resampling: Cross-Validated (4 fold) 
+## 
+## Summary of sample sizes: 1768, 1769, 1767, 1767 
+## 
+## Resampling results across tuning parameters:
+## 
+##   mtry  Accuracy  Kappa  Accuracy SD  Kappa SD
+##    2    0.934     0.917  0.00888      0.0113  
+##   27    0.936     0.919  0.01338      0.0170  
+##   52    0.930     0.912  0.00932      0.0118  
+## 
+## Accuracy was used to select the optimal model using  the largest value.
+## The final value used for the model was mtry = 27.</code></pre>
+<p>Predict on testing set 2 of 5 with both preprocessing and cross validation</p>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction   A   B   C   D   E
+##          A 442  14   0   0   1
+##          B   1 287  13   1  11
+##          C   0   1 257  11   7
+##          D   0   1   3 244   2
+##          E   3   1   1   1 267
+## 
+## Overall Statistics
+##                                           
+##                Accuracy : 0.9541          
+##                  95% CI : (0.9426, 0.9639)
+##     No Information Rate : 0.2843          
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
+##                                           
+##                   Kappa : 0.9419          
+##  Mcnemar&#39;s Test P-Value : NA              
+## 
+## Statistics by Class:
+## 
+##                      Class: A Class: B Class: C Class: D Class: E
+## Sensitivity            0.9910   0.9441   0.9380   0.9494   0.9271
+## Specificity            0.9866   0.9794   0.9853   0.9954   0.9953
+## Pos Pred Value         0.9672   0.9169   0.9312   0.9760   0.9780
+## Neg Pred Value         0.9964   0.9865   0.9869   0.9901   0.9838
+## Prevalence             0.2843   0.1938   0.1746   0.1638   0.1836
+## Detection Rate         0.2817   0.1829   0.1638   0.1555   0.1702
+## Detection Prevalence   0.2913   0.1995   0.1759   0.1593   0.1740
+## Balanced Accuracy      0.9888   0.9618   0.9616   0.9724   0.9612</code></pre>
+<p>Predict on project testing set</p>
+<pre><code>##  [1] B A A A A E D D A A B C B A E E A B B B
+## Levels: A B C D E</code></pre>
+<p>Train on training set 3 of 5 with both preprocessing and cross validation</p>
+<pre><code>## Random Forest 
+## 
+## 2334 samples
+##   52 predictor
+##    5 classes: &#39;A&#39;, &#39;B&#39;, &#39;C&#39;, &#39;D&#39;, &#39;E&#39; 
+## 
+## Pre-processing: centered, scaled 
+## Resampling: Cross-Validated (4 fold) 
+## 
+## Summary of sample sizes: 1750, 1752, 1750, 1750 
+## 
+## Resampling results across tuning parameters:
+## 
+##   mtry  Accuracy  Kappa  Accuracy SD  Kappa SD
+##    2    0.950     0.937  0.01010      0.01283 
+##   27    0.951     0.938  0.01271      0.01608 
+##   52    0.944     0.930  0.00648      0.00818 
+## 
+## Accuracy was used to select the optimal model using  the largest value.
+## The final value used for the model was mtry = 27.</code></pre>
+<p>Predict on testing set 3 of 5 with both preprocessing and cross validation</p>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction   A   B   C   D   E
+##          A 435   7   0   0   0
+##          B   5 286  11   2   2
+##          C   2   7 259  16   3
+##          D   0   0   1 235   1
+##          E   0   0   0   1 279
+## 
+## Overall Statistics
+##                                          
+##                Accuracy : 0.9626         
+##                  95% CI : (0.952, 0.9715)
+##     No Information Rate : 0.2848         
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16      
+##                                          
+##                   Kappa : 0.9527         
+##  Mcnemar&#39;s Test P-Value : NA             
+## 
+## Statistics by Class:
+## 
+##                      Class: A Class: B Class: C Class: D Class: E
+## Sensitivity            0.9842   0.9533   0.9557   0.9252   0.9789
+## Specificity            0.9937   0.9840   0.9781   0.9985   0.9992
+## Pos Pred Value         0.9842   0.9346   0.9024   0.9916   0.9964
+## Neg Pred Value         0.9937   0.9888   0.9905   0.9856   0.9953
+## Prevalence             0.2848   0.1933   0.1746   0.1637   0.1836
+## Detection Rate         0.2803   0.1843   0.1669   0.1514   0.1798
+## Detection Prevalence   0.2848   0.1972   0.1849   0.1527   0.1804
+## Balanced Accuracy      0.9889   0.9687   0.9669   0.9618   0.9891</code></pre>
+<p>Predict on project testing set</p>
+<pre><code>##  [1] B A B A A E D D A A B C B A E E A B B B
+## Levels: A B C D E</code></pre>
+<p>Train on training set 4 of 5 with both preprocessing and cross validation</p>
+<pre><code>## Random Forest 
+## 
+## 2368 samples
+##   52 predictor
+##    5 classes: &#39;A&#39;, &#39;B&#39;, &#39;C&#39;, &#39;D&#39;, &#39;E&#39; 
+## 
+## Pre-processing: centered, scaled 
+## Resampling: Cross-Validated (4 fold) 
+## 
+## Summary of sample sizes: 1776, 1776, 1777, 1775 
+## 
+## Resampling results across tuning parameters:
+## 
+##   mtry  Accuracy  Kappa  Accuracy SD  Kappa SD
+##    2    0.944     0.929  0.00881      0.01116 
+##   27    0.943     0.928  0.00640      0.00805 
+##   52    0.936     0.919  0.00643      0.00811 
+## 
+## Accuracy was used to select the optimal model using  the largest value.
+## The final value used for the model was mtry = 2.</code></pre>
+<p>Predict on testing set 4 of 5 with both preprocessing and cross validation</p>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction   A   B   C   D   E
+##          A 442  15   0   5   0
+##          B   2 283  12   0   3
+##          C   2   7 261  18   3
+##          D   1   0   1 232   4
+##          E   1   0   0   3 280
+## 
+## Overall Statistics
+##                                           
+##                Accuracy : 0.9511          
+##                  95% CI : (0.9393, 0.9612)
+##     No Information Rate : 0.2844          
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
+##                                           
+##                   Kappa : 0.9381          
+##  Mcnemar&#39;s Test P-Value : NA              
+## 
+## Statistics by Class:
+## 
+##                      Class: A Class: B Class: C Class: D Class: E
+## Sensitivity            0.9866   0.9279   0.9526   0.8992   0.9655
+## Specificity            0.9823   0.9866   0.9769   0.9954   0.9969
+## Pos Pred Value         0.9567   0.9433   0.8969   0.9748   0.9859
+## Neg Pred Value         0.9946   0.9827   0.9899   0.9806   0.9923
+## Prevalence             0.2844   0.1937   0.1740   0.1638   0.1841
+## Detection Rate         0.2806   0.1797   0.1657   0.1473   0.1778
+## Detection Prevalence   0.2933   0.1905   0.1848   0.1511   0.1803
+## Balanced Accuracy      0.9844   0.9572   0.9647   0.9473   0.9812</code></pre>
+<p>Predict on project testing set</p>
+<pre><code>##  [1] B A C A A E D B A A B C B A E E A B B B
+## Levels: A B C D E</code></pre>
+<p>Train on training set 5 of 5 with both preprocessing and cross validation</p>
+<pre><code>## Random Forest 
+## 
+## 2367 samples
+##   52 predictor
+##    5 classes: &#39;A&#39;, &#39;B&#39;, &#39;C&#39;, &#39;D&#39;, &#39;E&#39; 
+## 
+## Pre-processing: centered, scaled 
+## Resampling: Cross-Validated (4 fold) 
+## 
+## Summary of sample sizes: 1774, 1776, 1776, 1775 
+## 
+## Resampling results across tuning parameters:
+## 
+##   mtry  Accuracy  Kappa  Accuracy SD  Kappa SD
+##    2    0.939     0.923  0.00360      0.00458 
+##   27    0.943     0.928  0.00913      0.01155 
+##   52    0.935     0.917  0.00365      0.00462 
+## 
+## Accuracy was used to select the optimal model using  the largest value.
+## The final value used for the model was mtry = 27.</code></pre>
+<p>Predict on testing set 5 of 5 with both preprocessing and cross validation</p>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction   A   B   C   D   E
+##          A 440  20   1   1   0
+##          B   2 278   6   1   3
+##          C   3   6 257   9   5
+##          D   3   0   8 246   2
+##          E   0   0   2   1 279
+## 
+## Overall Statistics
+##                                          
+##                Accuracy : 0.9536         
+##                  95% CI : (0.942, 0.9634)
+##     No Information Rate : 0.2848         
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16      
+##                                          
+##                   Kappa : 0.9412         
+##  Mcnemar&#39;s Test P-Value : NA             
+## 
+## Statistics by Class:
+## 
+##                      Class: A Class: B Class: C Class: D Class: E
+## Sensitivity            0.9821   0.9145   0.9380   0.9535   0.9654
+## Specificity            0.9804   0.9905   0.9823   0.9901   0.9977
+## Pos Pred Value         0.9524   0.9586   0.9179   0.9498   0.9894
+## Neg Pred Value         0.9928   0.9797   0.9869   0.9909   0.9923
+## Prevalence             0.2848   0.1933   0.1742   0.1640   0.1837
+## Detection Rate         0.2797   0.1767   0.1634   0.1564   0.1774
+## Detection Prevalence   0.2937   0.1844   0.1780   0.1647   0.1793
+## Balanced Accuracy      0.9813   0.9525   0.9601   0.9718   0.9815</code></pre>
+<p>Predict on project testing set</p>
+<pre><code>##  [1] B A B A A E D B A A B C B A E E A B B B
+## Levels: A B C D E</code></pre>
+</div>
+<div id="out-of-sample-error" class="section level3">
+<h3>Out of Sample Error</h3>
+<p>This error is (1- Accuracy) for each prediction</p>
+<ul>
+<li><p>Random Forest cross validation test set 1 :<br />[1] B A B A A E D B A A B C B A E E A B B B : 1 - 0.9452 = 0.0548</p></li>
+<li><p>Random Forest cross validation and preprocessing test set 1 :<br />[1] B A B A A E D B A A B C B A E E A B B B : 1 - 0.9465 = 0.0535</p></li>
+<li><p>Random Forest cross validation and preprocessing test set 2 :<br />[1] B A A A A E D D A A B C B A E E A B B B : 1 - 0.9541 = 0.0459</p></li>
+<li><p>Random Forest cross validation and preprocessing test set 3 :<br />[1] B A B A A E D D A A B C B A E E A B B B : 1 - 0.9626 = 0.0374</p></li>
+<li><p>Random Forest cross validation and preprocessing test set 4 :<br />[1] B A C A A E D B A A B C B A E E A B B B : 1 - 0.9588 = 0.0412</p></li>
+<li><p>Random Forest cross validation and preprocessing test set 5 :<br />[1] B A B A A E D B A A B C B A E E A B B B : 1 - 0.9536 = 0.0464</p></li>
+</ul>
+</div>
+<div id="conclusions" class="section level3">
+<h3>Conclusions</h3>
+<p>As we can submit at most 2 solutions for each test, we will choose the 2 sets with lower error: set3 and 4. Item 3 and 8 differ between these 2 sets. I amended submission function to prepare both solution set with files named on pattern : <code>problem_id_iXpredj.txt</code>(i=submission id;X=prediction result;predj=prediction/model id). We got 100% of correct answers.</p>
+</div>
+<div id="appendix-project-submission-function" class="section level3">
+<h3>Appendix : Project Submission function</h3>
+<pre class="r"><code>pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0(&quot;problem_id_&quot;,i,x[i],deparse(substitute(x)),&quot;.txt&quot;)
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+pml_write_files(pred3)
+pml_write_files(pred4)</code></pre>
+</div>
+
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+$(document).ready(function () {
+  $('tr.header').parent('thead').parent('table').addClass('table table-condensed');
+});
+
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
